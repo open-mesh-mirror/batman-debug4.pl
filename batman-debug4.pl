@@ -48,9 +48,29 @@ while (<BATMANLOG>) {
 
 		$receive_hash{ $last_orig }{ $last_neigh }{ "not_best" }++;
 
+	} elsif ( m/ttl\ exceeded/ ) {
+
+		$receive_hash{ $last_orig }{ $last_neigh }{ "ttl" }++;
+
+	} elsif ( m/Packet\ with\ unidirectional\ flag/ ) {
+
+		$receive_hash{ $last_orig }{ $last_neigh }{ "uni" }++;
+
+	} elsif ( m/received\ via\ bidirectional\ link/ ) {
+
+		$receive_hash{ $last_orig }{ $last_neigh }{ "bi" }++;
+
+	} elsif ( m/neighbour\ thinks\ connection\ is\ bidirectional\ -\ I\ disagree/ ) {
+
+		$receive_hash{ $last_orig }{ $last_neigh }{ "disagree" }++;
+
 	} elsif ( m/Duplicate\ packet/ ) {
 
 		$receive_hash{ $last_orig }{ $last_neigh }{ "dup" }++;
+
+	} elsif ( m/Incompatible\ batman\ version/ ) {
+
+		$receive_hash{ $last_orig }{ $last_neigh }{ "incom" }++;
 
 	} elsif ( m/Using\ interface\ (.*?)\ with\ address\ ([\d]+\.[\d]+\.[\d]+\.[\d]+)/ ) {
 
@@ -90,9 +110,15 @@ foreach my $orginator ( keys %receive_hash ) {
 		$sum += $receive_hash{ $orginator }{ $neighbour }{ "num_recv" };
 		$string .= " => $neighbour" . ( $myself_hash{ $neighbour } ? " (myself):\t" : ":\t\t" );
 		$string .= " recv = " . $receive_hash{ $orginator }{ $neighbour }{ "num_recv" };
-		$string .= ", forw = " . ( $receive_hash{ $orginator }{ $neighbour }{ "num_forw" } ? $receive_hash{ $orginator }{ $neighbour }{ "num_forw" } : "0" );
+		$string .= " <> forw = " . ( $receive_hash{ $orginator }{ $neighbour }{ "num_forw" } ? $receive_hash{ $orginator }{ $neighbour }{ "num_forw" } : "0" );
+		$string .= " \t [ uni = " . ( $receive_hash{ $orginator }{ $neighbour }{ "uni" } ? $receive_hash{ $orginator }{ $neighbour }{ "uni" } : "0" );
+		$string .= "; bi = " . ( $receive_hash{ $orginator }{ $neighbour }{ "bi" } ? $receive_hash{ $orginator }{ $neighbour }{ "bi" } : "0" );
+		$string .= "; uni/bi = " . ( $receive_hash{ $orginator }{ $neighbour }{ "disagree" } ? $receive_hash{ $orginator }{ $neighbour }{ "disagree" } : "0" ) . " ]";
 		$string .= " [ not best = " . ( $receive_hash{ $orginator }{ $neighbour }{ "not_best" } ? $receive_hash{ $orginator }{ $neighbour }{ "not_best" } : "0" );
-		$string .= "; duplicate = " . ( $receive_hash{ $orginator }{ $neighbour }{ "dup" } ? $receive_hash{ $orginator }{ $neighbour }{ "dup" } : "0" ) . " ]\n";
+		$string .= "; uni = " . ( $receive_hash{ $orginator }{ $neighbour }{ "uni" } ? $receive_hash{ $orginator }{ $neighbour }{ "uni" } : "0" );
+		$string .= "; incom = " . ( $receive_hash{ $orginator }{ $neighbour }{ "incom" } ? $receive_hash{ $orginator }{ $neighbour }{ "incom" } : "0" );
+		$string .= "; ttl = " . ( $receive_hash{ $orginator }{ $neighbour }{ "ttl" } ? $receive_hash{ $orginator }{ $neighbour }{ "ttl" } : "0" );
+		$string .= "; dup = " . ( $receive_hash{ $orginator }{ $neighbour }{ "dup" } ? $receive_hash{ $orginator }{ $neighbour }{ "dup" } : "0" ) . " ]\n";
 
 	}
 
@@ -100,3 +126,12 @@ foreach my $orginator ( keys %receive_hash ) {
 	print $string;
 
 }
+
+print "\n\nHelp:\n^^^^\n";
+print "\tuni      = received packet with unidirectional flag (won't be forwarded)\n";
+print "\tbi       = received packet via bidirectional link\n";
+print "\tuni/bi   = neighbour thinks connection is bidirectional - I disagree\n";
+print "\tnot best = received packet didn't came via my best neighbor (won't be forwarded)\n";
+print "\tincom    = received packet indicated incompatible batman version (will be ignored)\n";
+print "\tttl      = ttl of packet exceeded (won't be forwarded)\n";
+print "\tdup      = received packet is a duplicate\n";
